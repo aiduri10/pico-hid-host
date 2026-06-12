@@ -132,6 +132,84 @@ def resolve(is_special: bool, token: str) -> tuple[int, int] | None:
     return _MAP[token]
 
 
+# ── Korean 2-beolsik (두벌식) decomposition ───────────────────────────────────
+# Precomposed Hangul syllable (U+AC00–U+D7A3):
+#   offset = (cho × 21 + jung) × 28 + jong
+
+HANGUL_KEY   = (0x88, 0x00)   # HID usage: Hangul toggle
+_HANGUL_BASE = 0xAC00
+
+# 초성 19개 — index matches Unicode initial-consonant ordering
+_CHO = ('r','R','s','e','E','f','a','q','Q','t','T','d','w','W','c','z','x','v','g')
+
+# 중성 21개 — compound vowels are tuples of two keys
+_JUNG = (
+    'k', 'o', 'i', 'O', 'j', 'p', 'u', 'P',        # ㅏㅐㅑㅒㅓㅔㅕㅖ
+    'h', ('h','k'), ('h','o'), ('h','l'), 'y',        # ㅗㅘㅙㅚㅛ
+    'n', ('n','j'), ('n','p'), ('n','l'), 'b',        # ㅜㅝㅞㅟㅠ
+    'm', ('m','l'), 'l',                               # ㅡㅢㅣ
+)
+
+# 종성 28개 — index 0 = no final consonant
+_JONG = (
+    '',   'r',  'R',  ('r','t'), 's',  ('s','w'), ('s','g'), 'e',
+    'f',  ('f','r'), ('f','a'), ('f','q'), ('f','t'), ('f','x'), ('f','v'), ('f','g'),
+    'a',  'q',  ('q','t'), 't',  'T',  'd',  'w',  'c',  'z',  'x',  'v',  'g',
+)
+
+
+def _syllable_keys(cp: int):
+    """Yield 2-beolsik key characters for one precomposed Hangul syllable."""
+    offset = cp - _HANGUL_BASE
+    jong   = _JONG[offset % 28];  offset //= 28
+    jung   = _JUNG[offset % 21];  cho = _CHO[offset // 21]
+    yield cho
+    yield from (jung if isinstance(jung, tuple) else (jung,))
+    yield from (jong if isinstance(jong, tuple) else ((jong,) if jong else ()))
+
+
+def text_to_keystrokes(text: str):
+    """
+    Yield (keycode, modifier) pairs for text, handling Korean automatically.
+
+    - Korean syllables (U+AC00–U+D7A3) are decomposed to 2-beolsik jamo.
+    - HANGUL toggle is inserted automatically on Korean↔ASCII transitions.
+    - Assumes the target PC starts in English (IME-off) mode.
+    - Always ends in English mode so successive calls are independent.
+    """
+    korean_mode = False
+
+    for is_special, token in parse_tokens(text):
+        if is_special:
+            if token.upper() == 'HANGUL':
+                korean_mode = not korean_mode
+            kc = resolve(is_special, token)
+            if kc:
+                yield kc
+            continue
+
+        cp = ord(token)
+        if 0xAC00 <= cp <= 0xD7A3:
+            # Korean precomposed syllable
+            if not korean_mode:
+                yield HANGUL_KEY
+                korean_mode = True
+            for k in _syllable_keys(cp):
+                yield _MAP[k]
+        else:
+            # ASCII or other — switch out of Korean mode first
+            if korean_mode:
+                yield HANGUL_KEY
+                korean_mode = False
+            kc = resolve(False, token)
+            if kc:
+                yield kc
+
+    # Always leave the target in English mode
+    if korean_mode:
+        yield HANGUL_KEY
+
+
 # ── ECDH + AES-128-CTR session ────────────────────────────────────────────────
 class Session:
     def __init__(self):

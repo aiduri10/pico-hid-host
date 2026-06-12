@@ -24,7 +24,7 @@ from bleak import BleakClient, BleakScanner
 from core import (
     CHAR_HID, CHAR_HOST_PUBKEY, CHAR_PICO_PUBKEY,
     DEFAULT_DEVICE, RELEASE,
-    Session, make_report, parse_tokens, resolve,
+    Session, make_report, text_to_keystrokes,
 )
 
 # ── UI strings ────────────────────────────────────────────────────────────────
@@ -102,10 +102,8 @@ async def _send(client: BleakClient, session: Session,
 
 
 async def send_text(client: BleakClient, session: Session, text: str) -> None:
-    for is_special, token in parse_tokens(text):
-        kc = resolve(is_special, token)
-        if kc:
-            await _send(client, session, kc[0], kc[1])
+    for keycode, modifier in text_to_keystrokes(text):
+        await _send(client, session, keycode, modifier)
 
 
 # ── session modes ─────────────────────────────────────────────────────────────
