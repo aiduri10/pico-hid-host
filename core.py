@@ -157,6 +157,22 @@ _JONG = (
     'a',  'q',  ('q','t'), 't',  'T',  'd',  'w',  'c',  'z',  'x',  'v',  'g',
 )
 
+# Hangul Compatibility Jamo U+3131–U+3163 → 두벌식 key sequence
+# Indexed by (cp - 0x3131); consonants 0–29, vowels 30–50
+_COMPAT_JAMO = (
+    # consonants U+3131–U+314E
+    ('r',),    ('R',),    ('r','t'), ('s',),    ('s','w'), ('s','g'),  # ㄱㄲㄳㄴㄵㄶ
+    ('e',),    ('E',),    ('f',),    ('f','r'), ('f','a'), ('f','q'),  # ㄷㄸㄹㄺㄻㄼ
+    ('f','t'), ('f','x'), ('f','v'), ('f','g'), ('a',),    ('q',),     # ㄽㄾㄿㅀㅁㅂ
+    ('Q',),    ('q','t'), ('t',),    ('T',),    ('d',),    ('w',),     # ㅃㅄㅅㅆㅇㅈ
+    ('W',),    ('c',),    ('z',),    ('x',),    ('v',),    ('g',),     # ㅉㅊㅋㅌㅍㅎ
+    # vowels U+314F–U+3163
+    ('k',),    ('o',),    ('i',),    ('O',),    ('j',),    ('p',),     # ㅏㅐㅑㅒㅓㅔ
+    ('u',),    ('P',),    ('h',),    ('h','k'), ('h','o'), ('h','l'),  # ㅕㅖㅗㅘㅙㅚ
+    ('y',),    ('n',),    ('n','j'), ('n','p'), ('n','l'), ('b',),     # ㅛㅜㅝㅞㅟㅠ
+    ('m',),    ('m','l'), ('l',),                                       # ㅡㅢㅣ
+)
+
 
 def _syllable_keys(cp: int):
     """Yield 2-beolsik key characters for one precomposed Hangul syllable."""
@@ -200,6 +216,14 @@ def text_to_keystrokes(text: str):
                 korean_mode     = True
                 auto_need_reset = True
             for k in _syllable_keys(cp):
+                yield _MAP[k]
+        elif 0x3131 <= cp <= 0x3163:
+            # Isolated Hangul compatibility jamo (ㄱ-ㅎ consonants, ㅏ-ㅣ vowels)
+            if not korean_mode:
+                yield HANGUL_KEY
+                korean_mode     = True
+                auto_need_reset = True
+            for k in _COMPAT_JAMO[cp - 0x3131]:
                 yield _MAP[k]
         else:
             # Only switch out of Korean mode for ASCII alphabetic keys —
