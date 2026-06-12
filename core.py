@@ -202,8 +202,10 @@ def text_to_keystrokes(text: str):
             for k in _syllable_keys(cp):
                 yield _MAP[k]
         else:
-            # ASCII or other — switch out of Korean mode first
-            if korean_mode:
+            # Only switch out of Korean mode for ASCII alphabetic keys —
+            # they become jamo in Korean IME mode and must be typed in English.
+            # Space, Enter, digits, punctuation behave the same in both modes.
+            if korean_mode and token.isascii() and token.isalpha():
                 yield HANGUL_KEY
                 korean_mode     = False
                 auto_need_reset = False
