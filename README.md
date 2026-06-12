@@ -1,15 +1,17 @@
-# pico-hid host
+# pico-hid-host
 
-BLE keyboard injector for Raspberry Pi Pico W HID bridge.  
-Connects to the Pico over BLE and injects keystrokes into the target PC via USB HID.
+BLE keyboard injector host for Raspberry Pi Pico W HID bridge.  
+Connects to the Pico W over BLE and injects keystrokes into the target PC via USB HID.
+
+> **Firmware**: [pico-hid-firmware](https://github.com/aiduri10/pico-hid-firmware) — flash this to the Pico W first.
 
 ## Install
 
 ### Linux / macOS
 
 ```bash
-git clone https://github.com/YOUR/pico-hid
-cd pico-hid/host
+git clone https://github.com/aiduri10/pico-hid-host
+cd pico-hid-host
 bash install.sh
 ```
 
@@ -23,8 +25,8 @@ pico-hid AA:BB:CC:DD:EE:FF  # MAC 주소로 연결
 ### Windows
 
 ```powershell
-git clone https://github.com/YOUR/pico-hid
-cd pico-hid\host
+git clone https://github.com/aiduri10/pico-hid-host
+cd pico-hid-host
 .\install.ps1
 ```
 
