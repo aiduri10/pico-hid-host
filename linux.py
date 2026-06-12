@@ -13,12 +13,25 @@ DEVICE: device name or MAC address (default: PicoHID)
 
 import asyncio
 import argparse
+import atexit
 import os
 import select
 import sys
 import termios
 import threading
 import tty
+
+# Restore terminal on unexpected exit (SIGTERM, unhandled exception, etc.)
+_saved_termios: list = []
+
+def _restore_terminal():
+    if _saved_termios:
+        try:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, _saved_termios[0])
+        except Exception:
+            pass
+
+atexit.register(_restore_terminal)
 
 import readline  # noqa: F401 — enables arrow-key history in line mode
 
@@ -150,6 +163,7 @@ async def _raw_mode(client: BleakClient, session: Session) -> None:
     """
     fd  = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
+    _saved_termios[:] = [old]  # register for atexit recovery
 
     print("\r\nRaw mode — every keystroke forwarded immediately.\r\n"
           "  ~.   disconnect       ~~   send literal ~\r\n"
@@ -267,6 +281,7 @@ async def _raw_mode(client: BleakClient, session: Session) -> None:
     finally:
         stop.set()
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        _saved_termios.clear()  # atexit no longer needed
         print("\r\nLeft raw mode.\r\n", flush=True)
 
 
