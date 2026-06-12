@@ -121,7 +121,7 @@ async def _send(client: BleakClient, session: Session,
     payload = session.encrypt(make_report(keycode, modifier), RELEASE)
     while True:
         try:
-            await client.write_gatt_char(CHAR_HID, payload, response=False)
+            await client.write_gatt_char(CHAR_HID, payload, response=True)
             return
         except Exception:
             await asyncio.sleep(0.005)
