@@ -174,15 +174,19 @@ def text_to_keystrokes(text: str):
 
     - Korean syllables (U+AC00–U+D7A3) are decomposed to 2-beolsik jamo.
     - HANGUL toggle is inserted automatically on Korean↔ASCII transitions.
-    - Assumes the target PC starts in English (IME-off) mode.
-    - Always ends in English mode so successive calls are independent.
+    - Explicit {HANGUL} in text is forwarded as-is (one press = one toggle).
+    - Auto-reset to English only happens for auto-inserted toggles, not manual ones.
     """
-    korean_mode = False
+    korean_mode     = False
+    auto_need_reset = False  # True only when WE auto-inserted the HANGUL entry
 
     for is_special, token in parse_tokens(text):
         if is_special:
             if token.upper() == 'HANGUL':
                 korean_mode = not korean_mode
+                if not korean_mode:
+                    # user toggled back to English — no auto-reset needed
+                    auto_need_reset = False
             kc = resolve(is_special, token)
             if kc:
                 yield kc
@@ -193,20 +197,22 @@ def text_to_keystrokes(text: str):
             # Korean precomposed syllable
             if not korean_mode:
                 yield HANGUL_KEY
-                korean_mode = True
+                korean_mode     = True
+                auto_need_reset = True
             for k in _syllable_keys(cp):
                 yield _MAP[k]
         else:
             # ASCII or other — switch out of Korean mode first
             if korean_mode:
                 yield HANGUL_KEY
-                korean_mode = False
+                korean_mode     = False
+                auto_need_reset = False
             kc = resolve(False, token)
             if kc:
                 yield kc
 
-    # Always leave the target in English mode
-    if korean_mode:
+    # Reset to English only if we auto-entered Korean (not if user toggled manually)
+    if auto_need_reset and korean_mode:
         yield HANGUL_KEY
 
 
